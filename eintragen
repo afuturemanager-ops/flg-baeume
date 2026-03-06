@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neue Bäume registrieren</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f7f7f5;
+      color: #1f2937;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    .logo {
+      height: 54px;
+      margin: 8px auto 6px;
+      display: block;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 10px 0 6px;
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .intro {
+      text-align: center;
+      color: #4b5563;
+      margin-bottom: 20px;
+    }
+
+    #map {
+      height: 460px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 22px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #1f2937;
+    }
+
+    input {
+      padding: 12px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    input[readonly] {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .actions {
+      margin-top: 22px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 13px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #1a7f37;
+      color: white;
+    }
+
+    .secondary {
+      background: #e5e7eb;
+      color: #1f2937;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.info {
+      display: block;
+      background: #eef6ff;
+      color: #1e3a8a;
+    }
+
+    .status.success {
+      display: block;
+      background: #ecfdf3;
+      color: #166534;
+    }
+
+    .status.error {
+      display: block;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    @media (max-width: 720px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="./logo.png" alt="FLG – Zukunft pflanzen Logo" />
+    <h1>Neue Bäume registrieren</h1>
+    <div class="intro">
+      Bitte zuerst auf die Karte klicken, um den Standort festzulegen.
+    </div>
+
+    <div id="map"></div>
+
+    <div class="card">
+      <form id="treeForm">
+        <div class="grid">
+          <div class="field full">
+            <label for="ort">Ort</label>
+            <input id="ort" name="ort" type="text" required placeholder="z. B. Framersheim, Schulhof Nord" />
+          </div>
+
+          <div class="field">
+            <label for="anzahl">Anzahl</label>
+            <input id="anzahl" name="anzahl" type="number" min="1" step="1" required placeholder="z. B. 12" />
+          </div>
+
+          <div class="field">
+            <label for="datum">Datum</label>
+            <input id="datum" name="datum" type="date" required />
+          </div>
+
+          <div class="field full">
+            <label for="spender">Spender</label>
+            <input id="spender" name="spender" type="text" required placeholder="z. B. Klasse 6b, Familie Müller, Förderverein" />
+          </div>
+
+          <div class="field">
+            <label for="breitengrad">Breitengrad</label>
+            <input id="breitengrad" name="breitengrad" type="text" readonly required />
+            <div class="hint">Wird durch Klick auf die Karte gesetzt</div>
+          </div>
+
+          <div class="field">
+            <label for="laengengrad">Längengrad</label>
+            <input id="laengengrad" name="laengengrad" type="text" readonly required />
+            <div class="hint">Wird durch Klick auf die Karte gesetzt</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary">Eintrag absenden</button>
+          <button type="button" class="secondary" id="resetMap">Punkt zurücksetzen</button>
+        </div>
+
+        <div id="statusBox" class="status info">
+          Noch kein Webhook hinterlegt. Der Eintrag wird aktuell nur angezeigt, aber nicht gespeichert.
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Später von der Agentur/IT ausfüllen/aktualisieren:
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyYIme2myCav0e8HnwngYuM0hcgsYEQn_7A8ENXQecfhj4f8u8uxsvN3Q9G-jNVY4z5/exec";
+
+    const map = L.map("map").setView([49.95, 8.20], 9);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    let selectedMarker = null;
+
+    const ortInput = document.getElementById("ort");
+    const anzahlInput = document.getElementById("anzahl");
+    const datumInput = document.getElementById("datum");
+    const spenderInput = document.getElementById("spender");
+    const breitengradInput = document.getElementById("breitengrad");
+    const laengengradInput = document.getElementById("laengengrad");
+    const statusBox = document.getElementById("statusBox");
+    const form = document.getElementById("treeForm");
+    const resetMapBtn = document.getElementById("resetMap");
+
+    // Heute vorbelegen
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    datumInput.value = `${yyyy}-${mm}-${dd}`;
+
+    map.on("click", function (e) {
+      const lat = e.latlng.lat.toFixed(6);
+      const lng = e.latlng.lng.toFixed(6);
+
+      breitengradInput.value = lat;
+      laengengradInput.value = lng;
+
+      if (selectedMarker) {
+        selectedMarker.setLatLng(e.latlng);
+      } else {
+        selectedMarker = L.marker(e.latlng).addTo(map);
+      }
+
+      selectedMarker.bindPopup("Ausgewählter Pflanzort").openPopup();
+    });
+
+    resetMapBtn.addEventListener("click", function () {
+      breitengradInput.value = "";
+      laengengradInput.value = "";
+
+      if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+        selectedMarker = null;
+      }
+    });
+
+    function showStatus(type, message) {
+      statusBox.className = `status ${type}`;
+      statusBox.textContent = message;
+    }
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      if (!breitengradInput.value || !laengengradInput.value) {
+        showStatus("error", "Bitte zuerst einen Punkt auf der Karte auswählen.");
+        return;
+      }
+
+      const payload = {
+        ort: ortInput.value.trim(),
+        anzahl: Number(anzahlInput.value),
+        datum: datumInput.value,
+        spender: spenderInput.value.trim(),
+        breitengrad: Number(breitengradInput.value),
+        laengengrad: Number(laengengradInput.value)
+      };
+
+      if (!payload.ort || !payload.anzahl || !payload.datum || !payload.spender) {
+        showStatus("error", "Bitte alle Felder vollständig ausfüllen.");
+        return;
+      }
+
+      // Solange noch kein Webhook existiert:
+      if (!WEBHOOK_URL) {
+        console.log("Test-Eintrag:", payload);
+        showStatus(
+          "info",
+          "Testmodus: Der Eintrag wurde noch nicht gespeichert. Er wurde in der Browser-Konsole ausgegeben. Sobald die Agentur/IT den Webhook einträgt, funktioniert das Formular live."
+        );
+        return;
+      }
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error("Webhook-Antwort war nicht erfolgreich.");
+        }
+
+        form.reset();
+        datumInput.value = `${yyyy}-${mm}-${dd}`;
+        breitengradInput.value = "";
+        laengengradInput.value = "";
+
+        if (selectedMarker) {
+          map.removeLayer(selectedMarker);
+          selectedMarker = null;
+        }
+
+        showStatus("success", "Vielen Dank! Der Eintrag wurde erfolgreich übermittelt.");
+      } catch (err) {
+        console.error(err);
+        showStatus("error", "Der Eintrag konnte nicht übermittelt werden. Bitte später erneut versuchen.");
+      }
+    });
+  </script>
+</body>
+</html>
