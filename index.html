@@ -135,7 +135,7 @@
     }
 
     // ---------- CSV laden ----------
-    Papa.parse("FLG_Baeume_Status.csv", {
+    Papa.parse("FLG_Baeume_Status.csv?v=" + Date.now(), {
       download: true,
       header: true,
       skipEmptyLines: true,
@@ -190,6 +190,7 @@
   </script>
 </body>
 </html>
+
 
 
 
