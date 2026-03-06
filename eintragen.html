@@ -48,6 +48,7 @@
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0,0,0,0.10);
       margin-bottom: 24px;
+      background: #e5e7eb;
     }
 
     .card {
@@ -208,14 +209,13 @@
         </div>
 
         <div id="statusBox" class="status info">
-          Noch kein Webhook hinterlegt. Der Eintrag wird aktuell nur angezeigt, aber nicht gespeichert.
+          Formular bereit.
         </div>
       </form>
     </div>
   </div>
 
   <script>
-    // Später von der Agentur/IT ausfüllen/aktualisieren:
     const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyYIme2myCav0e8HnwngYuM0hcgsYEQn_7A8ENXQecfhj4f8u8uxsvN3Q9G-jNVY4z5/exec";
 
     const map = L.map("map").setView([49.95, 8.20], 9);
@@ -236,7 +236,6 @@
     const form = document.getElementById("treeForm");
     const resetMapBtn = document.getElementById("resetMap");
 
-    // Heute vorbelegen
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
@@ -296,20 +295,17 @@
         return;
       }
 
-      // Solange noch kein Webhook existiert:
       if (!WEBHOOK_URL) {
         console.log("Test-Eintrag:", payload);
-        showStatus(
-          "info",
-          "Testmodus: Der Eintrag wurde noch nicht gespeichert. Er wurde in der Browser-Konsole ausgegeben. Sobald die Agentur/IT den Webhook einträgt, funktioniert das Formular live."
-        );
+        showStatus("info", "Kein Webhook hinterlegt.");
         return;
       }
 
-      const response = await fetch(WEBHOOK_URL, {
-  method: "POST",
-  body: JSON.stringify(payload)
-});
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
 
         if (!response.ok) {
           throw new Error("Webhook-Antwort war nicht erfolgreich.");
